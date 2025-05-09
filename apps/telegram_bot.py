@@ -108,6 +108,7 @@ async def scheduled_task(token):
                 all_new_urls.extend(new_urls)
 
             # 调用新封装的函数发送关键词汇总
+            await asyncio.sleep(10)  # 等待10秒，确保所有消息都发送完成
             await send_keywords_summary(bot, all_new_urls)
 
             logging.info("所有订阅源检查完成，等待下一次检查")
