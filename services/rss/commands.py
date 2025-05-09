@@ -216,6 +216,87 @@ async def rss_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 def register_commands(application: Application):
     """注册RSS相关的命令"""
     application.add_handler(CommandHandler("rss", rss_command))
+    application.add_handler(CommandHandler("news", force_summary_command_handler))
+
+
+async def force_send_keywords_summary(bot: Bot, target_chat: str = None) -> None:
+    """
+    强制从存储的 current 和 latest sitemap 文件比对生成并发送关键词汇总。
+    """
+    chat_id = target_chat or telegram_config["target_chat"]
+    if not chat_id:
+        logging.error("未配置发送目标，请检查TELEGRAM_TARGET_CHAT环境变量")
+        return
+
+    all_new_urls_for_summary = []
+    feeds = rss_manager.get_feeds()
+
+    if not feeds:
+        logging.info("没有配置任何 sitemap feeds，无法生成汇总。")
+        try:
+            await bot.send_message(chat_id=chat_id, text="⚠️ 没有配置任何 sitemap feeds，无法生成关键词汇总。")
+        except Exception as e:
+            logging.error(f"发送无 feeds 通知失败: {str(e)}")
+        return
+
+    logging.info(f"开始为 {len(feeds)} 个 feeds 强制生成关键词汇总。")
+    for feed_url in feeds:
+        try:
+            domain = urlparse(feed_url).netloc
+            domain_dir = rss_manager.sitemap_dir / domain
+            current_sitemap_file = domain_dir / "sitemap-current.xml"
+            # 'latest_sitemap_file' actually stores the sitemap content from the run *before* 'current_sitemap_file' was updated.
+            # So it's the 'old' or 'previous' sitemap.
+            latest_sitemap_file = domain_dir / "sitemap-latest.xml"
+
+            if current_sitemap_file.exists() and latest_sitemap_file.exists():
+                current_content = current_sitemap_file.read_text()
+                latest_content = latest_sitemap_file.read_text() # This is the 'old' content
+
+                # rss_manager.compare_sitemaps expects (new_content, old_content)
+                new_urls_for_feed = rss_manager.compare_sitemaps(current_content, latest_content)
+                if new_urls_for_feed:
+                    logging.info(f"强制汇总 - 为 {domain} 从 current/latest 文件比较中发现 {len(new_urls_for_feed)} 个新 URL。")
+                    all_new_urls_for_summary.extend(new_urls_for_feed)
+                else:
+                    logging.info(f"强制汇总 - 为 {domain} 从 current/latest 文件比较中未发现新 URL。")
+            else:
+                logging.warning(f"强制汇总 - 对于 {feed_url}，current ({current_sitemap_file.exists()}) 或 latest ({latest_sitemap_file.exists()}) sitemap 文件不存在，跳过比较。")
+        except Exception as e:
+            logging.error(f"强制汇总 - 处理 feed {feed_url} 时出错: {str(e)}")
+            continue
+
+    if all_new_urls_for_summary:
+        logging.info(f"强制汇总 - 共收集到 {len(all_new_urls_for_summary)} 个新 URL 用于生成汇总。")
+        await send_keywords_summary(bot, all_new_urls_for_summary, target_chat=chat_id)
+    else:
+        logging.info("强制汇总 - 所有 feeds 均未从 current/latest 文件比较中发现新 URL，不发送汇总。")
+        try:
+            await bot.send_message(chat_id=chat_id, text="ℹ️ 所有监控源的 current/latest sitemap 对比均无新增内容，无需发送关键词汇总。")
+        except Exception as e:
+            logging.error(f"发送无新增内容通知失败: {str(e)}")
+
+
+async def force_summary_command_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """处理 /news 命令，强制发送关键词汇总"""
+    user = update.message.from_user
+    chat_id = update.message.chat_id # Chat where the command was issued
+    logging.info(f"收到 /news 命令 - 用户: {user.username}(ID:{user.id}) 聊天ID: {chat_id}")
+
+    try:
+        await update.message.reply_text("⏳ 正在尝试从已存储的 sitemap 数据生成并发送关键词汇总...")
+
+        # The actual summary is sent to telegram_config["target_chat"]
+        await force_send_keywords_summary(context.bot)
+
+        logging.info(f"已通过 /news 命令尝试强制发送关键词汇总。")
+        await update.message.reply_text("✅ 关键词汇总已尝试发送至目标频道。如果没有任何新增内容，则不会发送。")
+    except Exception as e:
+        logging.error(f"执行 /news 命令失败: {str(e)}", exc_info=True)
+        try:
+            await update.message.reply_text(f"❌ 执行 /news 命令时出错: {str(e)}")
+        except Exception as e_reply:
+            logging.error(f"发送 /news 错误回执失败: {str(e_reply)}")
 
 
 async def send_keywords_summary(

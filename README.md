@@ -104,6 +104,7 @@ project/
   - `/rss list` - 显示所有监控的sitemap列表
   - `/rss add URL` - 添加新的sitemap监控（URL必须以sitemap.xml结尾）
   - `/rss del URL` - 删除指定的sitemap监控
+- `/news` - 手动触发关键词汇总的生成和发送。该命令会比较每个监控源已存储的 `current` 和 `latest` sitemap 文件，收集所有新增的 URL，并发送汇总的关键词速览到配置的目标频道。
 
 示例:
 ```bash
@@ -126,4 +127,3 @@ project/
    - 每小时检查一次所有订阅的sitemap
    - 自动对比并发现新增的URL
    - 将更新内容发送到指定频道/用户
-
