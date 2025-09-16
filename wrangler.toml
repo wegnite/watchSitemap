@@ -1,0 +1,23 @@
+name = "sitemap-monitor"
+main = "worker.js"
+compatibility_date = "2024-03-18"
+compatibility_flags = ["nodejs_compat"]
+
+# KV namespace for storing sitemap data
+[[kv_namespaces]]
+binding = "SITEMAP_STORAGE"
+id = "your-kv-namespace-id"
+preview_id = "your-preview-kv-namespace-id"
+
+# Scheduled event (cron job) - runs every hour
+[triggers]
+crons = ["0 * * * *"]
+
+# Environment variables
+[vars]
+ENVIRONMENT = "production"
+
+# Optional: Custom domains (if you have one)
+# routes = [
+#   { pattern = "your-domain.com/sitemap-monitor", zone_name = "your-domain.com" }
+# ]

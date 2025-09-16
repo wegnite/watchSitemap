@@ -1,0 +1,19 @@
+{
+  "name": "sitemap-monitor-cloudflare",
+  "version": "1.0.0",
+  "description": "游戏站Sitemap监控系统 - Cloudflare Workers版本",
+  "main": "worker.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "kv:create": "wrangler kv:namespace create SITEMAP_STORAGE",
+    "kv:create-preview": "wrangler kv:namespace create SITEMAP_STORAGE --preview"
+  },
+  "keywords": ["sitemap", "monitor", "cloudflare-workers", "gaming", "notification"],
+  "author": "wegnite",
+  "license": "MIT",
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}

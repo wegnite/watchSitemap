@@ -11,3 +11,7 @@ telegram_config = {
 discord_config = {
     "token": os.environ.get("DISCORD_TOKEN", ""),
 }
+
+feishu_config = {
+    "webhook_url": os.environ.get("FEISHU_WEBHOOK_URL", ""),
+}
